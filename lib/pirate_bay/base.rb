@@ -28,7 +28,7 @@ module PirateBay
     def execute
       return nil if search_string.nil?
       self.page += 1
-      
+
       if (@results.size < @results.total_results)
         doc = Nokogiri::HTML(get_search_results)
       end
@@ -36,7 +36,7 @@ module PirateBay
       next_page(doc)
 
     end
-    
+
     def sanitize_filename(filename)
       filename = filename.gsub(/[^0-9A-Za-z.\-]/, 'x')
       filename = filename.gsub(/^.*(\\|\/)/, '')
@@ -46,37 +46,37 @@ module PirateBay
     def cached_filename
       File.join("tmp", "searches", "#{sanitize_filename(search_string)}_#{category_id}_#{page}.html")
     end
-    
+
     def get_quality
       execute
       results = @results.map do |result|
         url = "#{BASE_URL}/torrent/#{result.id}/"
-        html = open(url).read
+        html = open(url, {ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}).read
         p = PirateBay::Details.new html, :init
         puts "Fetching results"
-        result = { 
-          :seeds => result.seeds, 
-          :size => result.size, 
-          :name => result.name, 
-          :video => p.video_quality_average, 
-          :audio => p.audio_quality_average, 
+        result = {
+          :seeds => result.seeds,
+          :size => result.size,
+          :name => result.name,
+          :video => p.video_quality_average,
+          :audio => p.audio_quality_average,
           :url => url,
           :video_votes => p.video_scores.size,
           :audio_votes => p.audio_scores.size,
           :video_votes_sum => p.video_quality_score_sum,
           :audio_votes_sum => p.audio_quality_score_sum
-        } 
+        }
         puts "Results: #{result}"
         result
       end
-      
+
       results.reject { |a| a[:video].nan? }.sort_by { |a| a[:video] }
     end
-    
+
 
     def fetch_search_results
       url = "#{BASE_URL}/search/#{search_string}/#{page}/7/#{category_id}" # highest seeded first
-      open(url, { "User-Agent" => "libcurl-agent/1.0" }).read
+      open(url, { "User-Agent" => "libcurl-agent/1.0" ,ssl_verify_mode: OpenSSL::SSL::VERIFY_NONE}).read
     end
 
     private
